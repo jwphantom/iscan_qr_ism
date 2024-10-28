@@ -11,7 +11,6 @@ iScan QR est une application mobile développée avec Flutter pour scanner les c
 ## ✨ Fonctionnalités Principales
 
 - **Scan QR Code**: Interface intuitive pour scanner les codes QR
-- **Cryptage Fernet**: Sécurisation des données avant transmission
 - **Mode Double Caméra**: Support des caméras avant et arrière
 - **Gestion de Flash**: Contrôle de la lampe torche pour la caméra arrière
 - **Anti-veille**: Maintien de l'écran actif pendant le scan
@@ -53,7 +52,7 @@ lib/
 2. **Cloner le projet**
 
    ```bash
-   git clone https://github.com/votre-username/iscan_qr.git
+   git clone https://github.com/jwphantom/iscan_qr_ism.git
    cd iscan_qr
    ```
 
