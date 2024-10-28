@@ -168,7 +168,7 @@ Ce projet est sous licence MIT.
 Pour toute question ou suggestion, contactez :
 
 - Email : jawill.olongo@gmail.com
-- GitHub : [votre-username](https://github.com/jwphantom)
+- GitHub : [jwphantom](https://github.com/jwphantom)
 
 ---
 
