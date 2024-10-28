@@ -63,23 +63,26 @@ lib/
 
 ## 🔧 Configuration
 
-1. Créez un fichier `.env` à la racine du projet :
+1. Configuration Android (`android/app/build.gradle`) :
 
-   ```env
-   SERVER_URL=votre_url_serveur
-   FERNET_KEY=votre_clé_fernet
-   ```
-
-2. Configuration Android (`android/app/build.gradle`) :
    ```gradle
    android {
        ...
        defaultConfig {
            ...
-           minSdkVersion 21
-           targetSdkVersion 33
+           minSdk = 23
+           targetSdk = flutter.targetSdkVersion
        }
    }
+   ```
+
+2. Configuration Android(`android/settings.gradle`) :
+   ```gradle
+    plugins {
+        id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+        id "com.android.application" version "7.4.0" apply false
+        id "org.jetbrains.kotlin.android" version "1.8.22" apply false
+    }
    ```
 
 ## 📱 Permissions Requises
