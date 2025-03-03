@@ -66,7 +66,10 @@ class _BadgeHistoryPageState extends State<BadgeHistoryPage> {
             label: 'OK',
             textColor: Colors.white,
             onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              // Vérifier si le widget est toujours monté avant d'utiliser le context
+              if (mounted) {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              }
             },
           ),
         ),
@@ -78,6 +81,7 @@ class _BadgeHistoryPageState extends State<BadgeHistoryPage> {
         SnackBar(
           content: Text(e.toString()),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
         ),
       );
     } finally {
@@ -214,7 +218,7 @@ class _BadgeHistoryPageState extends State<BadgeHistoryPage> {
                             ),
                           ),
                           title: Text(
-                            scan.name,
+                            scan.titre,
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -225,7 +229,7 @@ class _BadgeHistoryPageState extends State<BadgeHistoryPage> {
                             children: [
                               SizedBox(height: 4),
                               Text(
-                                scan.function,
+                                scan.message,
                                 style: TextStyle(
                                   color: Colors.grey[600],
                                 ),

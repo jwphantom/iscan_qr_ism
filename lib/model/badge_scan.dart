@@ -1,30 +1,38 @@
 class BadgeScan {
-  final String name;
-  final String function;
+  final String titre;
+  final String message;
+  final String? details;
   final bool isAuthorized;
+  final int statusCode;
   final DateTime scanTime;
 
   BadgeScan({
-    required this.name,
-    required this.function,
+    required this.titre,
+    required this.message,
+    required this.details,
     required this.isAuthorized,
+    required this.statusCode,
     required this.scanTime,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
-      'function': function,
+      'titre': titre,
+      'message': message,
+      'details': details ?? 'RAS',
       'isAuthorized': isAuthorized,
+      'statusCode': statusCode,
       'scanTime': scanTime.toIso8601String(),
     };
   }
 
   factory BadgeScan.fromJson(Map<String, dynamic> json) {
     return BadgeScan(
-      name: json['name'],
-      function: json['function'],
+      titre: json['titre'],
+      message: json['message'],
+      details: json['details'],
       isAuthorized: json['isAuthorized'],
+      statusCode: json['statusCode'],
       scanTime: DateTime.parse(json['scanTime']),
     );
   }

@@ -14,6 +14,10 @@ class HomeScreen extends StatelessWidget {
     final double iconSize = size.width < 600 ? 80.0 : 100.0;
     final double horizontalPadding = size.width < 600 ? 8.0 : 16.0;
 
+    // Calculer la taille du logo en fonction de la largeur de l'écran
+    final double logoSize =
+        size.width < 600 ? size.width * 0.5 : size.width * 0.6;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -29,51 +33,55 @@ class HomeScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+            // Logo container avec position absolute
+            Expanded(
+              flex: 1,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  Image.asset(
-                    'assets/images/logo.jpg',
-                    height: size.width < 600 ? 100 : 150,
-                    width: size.width < 600 ? 100 : 150,
-                    fit: BoxFit.contain,
+                  Positioned(
+                    child: Image.asset(
+                      'assets/images/logo.jpg',
+                      height: logoSize,
+                      width: logoSize,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ],
               ),
             ),
+            // Contenu central
             Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.qr_code_scanner,
-                      size: iconSize,
+              flex: 7,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.qr_code_scanner,
+                    size: iconSize,
+                    color: Colors.black,
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Scan QR Code',
+                    style: TextStyle(
+                      fontSize: size.width < 600 ? 20 : 24,
+                      fontWeight: FontWeight.w500,
                       color: Colors.black,
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Scan QR Code',
-                      style: TextStyle(
-                        fontSize: size.width < 600 ? 20 : 24,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                      ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Click on Scan to start scanning QR codes',
+                    style: TextStyle(
+                      fontSize: size.width < 600 ? 14 : 16,
+                      color: Colors.black54,
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Click on Scan to start scanning QR codes',
-                      style: TextStyle(
-                        fontSize: size.width < 600 ? 14 : 16,
-                        color: Colors.black54,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+            // Boutons
             Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: horizontalPadding,

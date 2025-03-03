@@ -1,13 +1,17 @@
 // lib/screens/qr_view_screen.dart
+import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:iscan_qr/screen/audio_service.dart';
-import 'package:iscan_qr/screen/camera_service.dart';
+import 'package:iscan_qr/screen/photo_capture_screen.dart';
+import 'package:iscan_qr/services/audio_service.dart';
+import 'package:iscan_qr/services/camera_service.dart';
 import 'package:iscan_qr/services/screen_timer_service.dart';
 import 'package:iscan_qr/widget/qr/qr_result_widget.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:iscan_qr/services/qr_verification.dart';
 import 'package:iscan_qr/services/badge_storage.dart';
 import 'package:iscan_qr/controllers/qr_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 class QRViewScreen extends StatefulWidget {
@@ -24,7 +28,7 @@ class _QRViewScreenState extends State<QRViewScreen>
   bool isFrontCamera = true;
   bool isAnalyzing = false;
   bool showResult = false;
-
+  String? scanMode;
   late AnimationController animationController;
   late Animation<double> fadeAnimation;
   late Animation<double> countdownAnimation;
@@ -35,8 +39,10 @@ class _QRViewScreenState extends State<QRViewScreen>
     super.initState();
     WakelockPlus.toggle(enable: true);
     _initializeServices();
+    _checkScanMode(); // Ajouter cette ligne
     _setupAnimations();
     _setupScreenManagement();
+    AudioService.initialize();
   }
 
   Future<void> _initializeServices() async {
@@ -48,6 +54,28 @@ class _QRViewScreenState extends State<QRViewScreen>
       onProcessingStart: () => setState(() => isAnalyzing = true),
       onProcessingEnd: () => setState(() => isAnalyzing = false),
     );
+  }
+
+  // Ajouter cette méthode
+  Future<void> _checkScanMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    scanMode = prefs.getString('scanMode') ?? 'both';
+    if (scanMode == 'photo' && mounted) {
+      // Si le mode est 'photo', ouvrir directement PhotoCaptureScreen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => PhotoCaptureScreen(qrContent: ''),
+          ),
+        );
+      });
+    }
+  }
+
+  Future<String> _getScanMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('scanMode') ?? 'both';
   }
 
   void _setupAnimations() {
@@ -99,6 +127,14 @@ class _QRViewScreenState extends State<QRViewScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (scanMode == 'photo') {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         children: [
@@ -112,18 +148,43 @@ class _QRViewScreenState extends State<QRViewScreen>
   }
 
   Widget _buildQRView() {
-    return QRView(
-      key: qrKey,
-      onQRViewCreated: _onQRViewCreated,
-      cameraFacing: CameraFacing.front,
-      overlay: QrScannerOverlayShape(
-        borderColor: Colors.blue,
-        borderRadius: 10,
-        borderLength: 30,
-        borderWidth: 10,
-        cutOutSize: 300,
-        overlayColor: const Color.fromARGB(208, 0, 0, 0),
-      ),
+    return Stack(
+      children: [
+        QRView(
+          key: qrKey,
+          onQRViewCreated: _onQRViewCreated,
+          cameraFacing: CameraFacing.front,
+          overlay: QrScannerOverlayShape(
+            borderColor: Colors.blue,
+            borderRadius: 10,
+            borderLength: 30,
+            borderWidth: 10,
+            cutOutSize: 300,
+            overlayColor: const Color.fromARGB(208, 0, 0, 0),
+          ),
+        ),
+        const Positioned(
+          top: 100,
+          left: 0,
+          right: 0,
+          child: Text(
+            'Scan QR Code',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              shadows: [
+                Shadow(
+                  offset: Offset(1.0, 1.0),
+                  blurRadius: 3.0,
+                  color: Colors.black54,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -274,9 +335,71 @@ class _QRViewScreenState extends State<QRViewScreen>
 
   void _onQRViewCreated(QRViewController controller) {
     this.controller = controller;
-    controller.scannedDataStream.listen((scanData) {
+    controller.scannedDataStream.listen((scanData) async {
       if (!isAnalyzing && !showResult && mounted) {
-        _qrController.handleQRCode(scanData, controller);
+        setState(() {
+          isAnalyzing = true;
+        });
+
+        try {
+          final scanMode = await _getScanMode();
+          await CameraService.pauseCamera(controller);
+
+          if (scanMode == 'photo') {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PhotoCaptureScreen(qrContent: ''),
+              ),
+            );
+
+            if (result != null && mounted) {
+              await _qrController.handleQRCodeWithPhoto(
+                context,
+                null, // Pas de QRCode scanné car mode photo
+                controller,
+                File(result['imagePath']),
+              );
+            } else {
+              await CameraService.resumeCamera(controller);
+            }
+          } else if (scanMode == 'qr') {
+            await _qrController.handleQRCodeWithPhoto(
+              context,
+              scanData,
+              controller,
+              null,
+            );
+          } else {
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    PhotoCaptureScreen(qrContent: scanData.code!),
+              ),
+            );
+
+            if (result != null && mounted) {
+              await _qrController.handleQRCodeWithPhoto(
+                context,
+                scanData,
+                controller,
+                File(result['imagePath']),
+              );
+            } else {
+              await CameraService.resumeCamera(controller);
+            }
+          }
+        } catch (e) {
+          print("Error in QR process: $e");
+          await CameraService.resumeCamera(controller);
+        } finally {
+          if (mounted) {
+            setState(() {
+              isAnalyzing = false;
+            });
+          }
+        }
       }
     });
   }

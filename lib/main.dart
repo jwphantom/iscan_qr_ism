@@ -14,7 +14,7 @@ void main() async {
   // prefs.remove('port');
   // prefs.remove('timeSleep');
   // prefs.remove('settings_pin');
-
+  //prefs.remove('badge_scans');
   runApp(const MyApp());
 }
 

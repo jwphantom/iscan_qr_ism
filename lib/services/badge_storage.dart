@@ -16,9 +16,11 @@ class BadgeStorageService {
 
   Future<void> saveBadgeScan(QRVerificationResult result) async {
     final badgeScan = BadgeScan(
-      name: result.name,
-      function: result.function,
+      titre: result.title,
+      message: result.message,
+      details: result.details,
       isAuthorized: result.isAuthorized,
+      statusCode: result.statusCode ?? 000,
       scanTime: DateTime.now(),
     );
 
@@ -54,7 +56,7 @@ class BadgeStorageService {
 
   List<BadgeScan> getBadgeScansForPerson(String name) {
     return getAllBadgeScans()
-        .where((scan) => scan.name.toLowerCase() == name.toLowerCase())
+        .where((scan) => scan.titre.toLowerCase() == name.toLowerCase())
         .toList();
   }
 

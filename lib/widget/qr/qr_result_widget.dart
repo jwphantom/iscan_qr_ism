@@ -20,7 +20,7 @@ class QRResultWidget extends StatelessWidget {
           opacity: fadeAnimation.value,
           child: Container(
             width: double.infinity,
-            padding: EdgeInsets.all(20),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.9),
               borderRadius: BorderRadius.circular(12),
@@ -28,19 +28,48 @@ class QRResultWidget extends StatelessWidget {
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
-                  offset: Offset(0, 5),
+                  offset: const Offset(0, 5),
                 ),
               ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildStatusHeader(),
-                SizedBox(height: 16),
-                _buildInfoRow(Icons.person, result.name),
-                SizedBox(height: 8),
-                _buildInfoRow(Icons.work, result.function),
+                // Grand cercle avec icône
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _getStatusColor(),
+                  ),
+                  child: Icon(
+                    _getStatusIcon(),
+                    color: Colors.white,
+                    size: 60,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Message principal
+                Text(
+                  result.isAuthorized ? 'Accès Autorisé' : 'Accès Refusé',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: _getStatusColor(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Message de détail
+                Text(
+                  result.message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
               ],
             ),
           ),
@@ -49,50 +78,23 @@ class QRResultWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusHeader() {
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: result.isAuthorized ? Colors.green : Colors.red,
-          ),
-          child: Icon(
-            result.isAuthorized ? Icons.check : Icons.close,
-            color: Colors.white,
-            size: 16,
-          ),
-        ),
-        SizedBox(width: 12),
-        Text(
-          result.isAuthorized ? 'Autorisé' : 'Refusé',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: result.isAuthorized ? Colors.green : Colors.red,
-          ),
-        ),
-      ],
-    );
+  Color _getStatusColor() {
+    if (result.isAuthorized) {
+      return Colors.green;
+    } else if (result.statusCode == 403) {
+      return Colors.red;
+    } else if (result.statusCode == 408 || result.statusCode == 503) {
+      return Colors.orange;
+    }
+    return Colors.red;
   }
 
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, color: Colors.grey[600], size: 20),
-        SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
-          ),
-        ),
-      ],
-    );
+  IconData _getStatusIcon() {
+    if (result.isAuthorized) {
+      return Icons.check;
+    } else if (result.statusCode == 408 || result.statusCode == 503) {
+      return Icons.wifi_off;
+    }
+    return Icons.close;
   }
 }

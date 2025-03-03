@@ -1,0 +1,203 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[french]{babel}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+
+\definecolor{codegray}{rgb}{0.95,0.95,0.95}
+\definecolor{darkgreen}{rgb}{0.0,0.5,0.0}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{codegray},   
+    commentstyle=\color{darkgreen},
+    keywordstyle=\color{blue},
+    numberstyle=\tiny\color{gray},
+    stringstyle=\color{red},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{Documentation de l'API de Vérification QR Code et Photo}
+\author{Équipe de Développement}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+Cette documentation explique comment le serveur backend en \textbf{Python (Flask)} doit gérer les requêtes de vérification envoyées par une application \textbf{Flutter}. L'application envoie des \textbf{QR codes} et/ou des \textbf{photos} pour authentification.
+
+\section{Endpoint attendu}
+L'application Flutter envoie une requête HTTP \textbf{POST} vers :
+\begin{verbatim}
+POST http://<IP>:<PORT>/validate_access
+\end{verbatim}
+L'adresse IP et le port sont configurables dans l'application.
+
+\section{Format de la requête}
+
+L'application supporte trois modes de vérification :
+\begin{itemize}
+    \item \textbf{QR Code seulement} : \texttt{scan\_mode="qr"}
+    \item \textbf{Photo seulement} : \texttt{scan\_mode="photo"}
+    \item \textbf{Les deux (par défaut)} : \texttt{scan\_mode="both"}
+\end{itemize}
+
+Les données envoyées peuvent inclure :
+\begin{itemize}
+    \item \texttt{scan\_mode} : \texttt{"qr"}, \texttt{"photo"} ou \texttt{"both"}.
+    \item \texttt{encrypted\_data} : chaîne encodée (nécessaire pour QR Code).
+    \item \texttt{photo} : fichier image (nécessaire pour la vérification photo).
+\end{itemize}
+
+\section{Exemple de requête HTTP}
+
+Sans photo :
+\begin{lstlisting}
+POST /validate_access HTTP/1.1
+Host: <IP>:<PORT>
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="scan_mode"
+
+qr
+------Boundary
+Content-Disposition: form-data; name="encrypted_data"
+
+EXEMPLE_QR_CODE
+------Boundary--
+\end{lstlisting}
+
+Avec photo :
+\begin{lstlisting}
+POST /validate_access HTTP/1.1
+Host: <IP>:<PORT>
+Content-Type: multipart/form-data; boundary=----Boundary
+
+------Boundary
+Content-Disposition: form-data; name="scan_mode"
+
+photo
+------Boundary
+Content-Disposition: form-data; name="photo"; filename="photo.jpg"
+Content-Type: image/jpeg
+
+[BLOB DE L'IMAGE]
+------Boundary--
+\end{lstlisting}
+
+\section{Traitement côté Backend (Flask)}
+
+\textbf{Installation des dépendances} :
+\begin{lstlisting}[language=bash]
+pip install flask flask-cors opencv-python numpy
+\end{lstlisting}
+
+\textbf{Code du serveur Flask} :
+\begin{lstlisting}[language=python]
+from flask import Flask, request, jsonify
+import cv2
+import numpy as np
+
+app = Flask(__name__)
+
+@app.route('/validate_access', methods=['POST'])
+def validate_access():
+    try:
+        scan_mode = request.form.get('scan_mode', 'both')
+
+        if scan_mode in ['qr', 'both']:
+            qr_data = request.form.get('encrypted_data')
+            if not qr_data:
+                return jsonify({"error": "QR Code manquant"}), 400
+            if qr_data != "EXEMPLE_QR_CODE_VALID":
+                return jsonify({"error": "QR Code invalide"}), 403
+
+        if scan_mode in ['photo', 'both']:
+            if 'photo' not in request.files:
+                return jsonify({"error": "Photo manquante"}), 400
+            file = request.files['photo']
+            np_image = np.frombuffer(file.read(), np.uint8)
+            img = cv2.imdecode(np_image, cv2.IMREAD_COLOR)
+
+            if not is_valid_face(img):
+                return jsonify({"error": "Photo non reconnue"}), 403
+
+        return jsonify({"status": "Access granted"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+def is_valid_face(image):
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+    return len(faces) > 0
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000, debug=True)
+\end{lstlisting}
+
+\section{Réponses attendues du serveur}
+
+Le backend doit répondre clairement à l'application Flutter :
+
+\begin{center}
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{Code HTTP} & \textbf{Description} & \textbf{Réponse JSON} \\
+\hline
+\texttt{200} & Accès autorisé & \texttt{\{"status": "Access granted"\}} \\
+\hline
+\texttt{400} & Requête invalide & \texttt{\{"error": "QR Code manquant"\}} \\
+\hline
+\texttt{403} & Accès refusé & \texttt{\{"error": "QR Code invalide"\}} \\
+\hline
+\texttt{500} & Erreur interne & \texttt{\{"error": "Message d'erreur"\}} \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Interaction entre Flutter et le Backend}
+
+\begin{enumerate}
+    \item L'utilisateur \textbf{scanne un QR Code} et/ou \textbf{prend une photo}.
+    \item L'application Flutter envoie une \textbf{requête HTTP POST} au serveur.
+    \item Le backend \textbf{vérifie les données} :
+    \begin{itemize}
+        \item QR Code → comparaison avec une base de données.
+        \item Photo → reconnaissance faciale (via OpenCV).
+    \end{itemize}
+    \item Le backend \textbf{retourne une réponse appropriée} :
+    \begin{itemize}
+        \item \texttt{200} : Accès autorisé.
+        \item \texttt{403} : Accès refusé.
+        \item \texttt{400} : Requête incorrecte.
+        \item \texttt{500} : Erreur interne.
+    \end{itemize}
+\end{enumerate}
+
+\section{Améliorations possibles}
+\begin{itemize}
+    \item Vérification avancée des QR Codes (base de données).
+    \item Utilisation de l'IA pour la reconnaissance faciale.
+    \item Ajout de logs et monitoring des accès.
+\end{itemize}
+
+\section{Conclusion}
+Cette documentation décrit comment l'API de vérification d'accès doit être implémentée en Python/Flask pour communiquer avec l'application Flutter. En suivant ces instructions, le serveur pourra gérer efficacement les authentifications basées sur QR Code et reconnaissance faciale.
+
+\end{document}
